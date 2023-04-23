@@ -5,11 +5,13 @@ A Python tool to fetch event data from the RA.co GraphQL API and save it as a CS
 ## Requirements
 
 - Python 3.6 or higher
+- requests library (pip install requests)
+- pandas library (pip install pandas)
 
 ## Installation
 
 1. Clone the repository or download the source code.
-2. Place the `graphql_query_template.json` file in the same directory as the `event_fetcher.py` script.
+2. Run pip install -r requirements.txt to install the required libraries.
 
 ## Usage
 
