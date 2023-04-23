@@ -1,5 +1,48 @@
 import requests
 import json
+import time
+
+
+def get_events(page_number, url, headers, payload):
+    payload["variables"]["page"] = page_number
+    response = requests.post(url, headers=headers, json=payload)
+    data = response.json()
+
+    if 'data' not in data:
+        print(f"Error: {data}")
+        return []
+
+    return data["data"]["eventListings"]["data"]
+
+
+
+def print_event_details(events):
+    for event in events:
+        event_data = event["event"]
+        print(f"Event name: {event_data['title']}")
+        print(f"Date: {event_data['date']}")
+        print(f"Start Time: {event_data['startTime']}")
+        print(f"End Time: {event_data['endTime']}")
+        print(f"Artists: {[artist['name'] for artist in event_data['artists']]}")
+        print(f"Venue: {event_data['venue']['name']}")
+        print(f"Event URL: {event_data['contentUrl']}")
+        print(f"Number of guests attending: {event_data['attending']}")
+        print("-" * 80)
+
+
+def generate_payload(areas, listing_date_gte, listing_date_lte):
+    with open("graphql_query_template.json", "r") as file:
+        payload = json.load(file)
+
+    # Update the relevant fields in the payload
+    payload["variables"]["filters"]["areas"]["eq"] = areas
+    payload["variables"]["filters"]["listingDate"]["gte"] = listing_date_gte
+    payload["variables"]["filters"]["listingDate"]["lte"] = listing_date_lte
+
+    return payload
+
+
+
 
 url = 'https://ra.co/graphql'
 headers = {
@@ -8,103 +51,30 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0'
 }
 
+areas = 13
+listing_date_gte = "2023-04-23T00:00:00.000Z"
+listing_date_lte = "2023-04-29T00:00:00.000Z"
+payload = generate_payload(areas, listing_date_gte, listing_date_lte)
 
-# Update the date range and other filters as needed
-payload = {
-    "operationName": "GET_EVENT_LISTINGS",
-    "variables": {
-        "filters": {
-            "areas": {"eq": 13},
-            "listingDate": {
-                "gte": "2023-04-23T00:00:00.000Z",
-                "lte": "2023-04-29T00:00:00.000Z"
-            }
-        },
-        "filterOptions": {"genre": True},
-        "pageSize": 20,
-        "page": 4
-    },
-    "query": """
-query GET_EVENT_LISTINGS($filters: FilterInputDtoInput, $filterOptions: FilterOptionsInputDtoInput, $page: Int, $pageSize: Int) {
-  eventListings(filters: $filters, filterOptions: $filterOptions, pageSize: $pageSize, page: $page) {
-    data {
-      id
-      listingDate
-      event {
-        ...eventListingsFields
-        artists {
-          id
-          name
-          __typename
-        }
-        __typename
-      }
-      __typename
-    }
-    filterOptions {
-      genre {
-        label
-        value
-        __typename
-      }
-      __typename
-    }
-    totalResults
-    __typename
-  }
-}
 
-fragment eventListingsFields on Event {
-  id
-  date
-  startTime
-  endTime
-  title
-  contentUrl
-  flyerFront
-  isTicketed
-  attending
-  queueItEnabled
-  newEventForm
-  images {
-    id
-    filename
-    alt
-    type
-    crop
-    __typename
-  }
-  pick {
-    id
-    blurb
-    __typename
-  }
-  venue {
-    id
-    name
-    contentUrl
-    live
-    __typename
-  }
-  __typename
-}
-"""
-}
+# Initialize the page number
+page_number = 1
 
-response = requests.post(url, headers=headers, data=json.dumps(payload))
-print(f"Status Code: {response.status_code}")
+# Define the delay between requests (in seconds)
+delay = 10  # Adjust this value as needed
 
-data = response.json()
+# Loop until there are no more events left
+while True:
+    events = get_events(page_number, url, headers, payload)
 
-# Extract event data from the response
-events = data['data']['eventListings']['data']
+    # Break the loop if there are no more events
+    if not events:
+        break
 
-# Print the event details
-for event in events:
-    event_data = event['event']
-    print(f"Event name: {event_data['title']}")
-    print(f"Artists: {[artist['name'] for artist in event_data['artists']]}")
-    print(f"Venue: {event_data['venue']['name']}")
-    print(f"Event URL: {event_data['contentUrl']}")
-    print(f"Number of guests attending: {event_data['attending']}")
-    print('-' * 80)
+    print_event_details(events)
+
+    # Increment the page number
+    page_number += 1
+
+    # Sleep for the specified delay before sending the next request
+    time.sleep(delay)
