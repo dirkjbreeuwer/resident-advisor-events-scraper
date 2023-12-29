@@ -1,0 +1,8 @@
+London = 13
+Birmingham = 516
+Manchester = 344
+Leeds = 346
+
+Berlin = 34
+Paris = 44
+Bucharest = 381
